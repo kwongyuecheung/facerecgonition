@@ -6,8 +6,10 @@ import fnmatch
 import psycopg2
 import Security_key
 import face1
-#declare final id
-final_id = ''
+import re
+import datetime
+
+
 #build the chat box
 root = tk.Tk()
 canvas1 = tk.Canvas(root, width = 400, height = 300,  relief = 'raised')
@@ -17,20 +19,57 @@ lbl = Label(root, text="顔認証ボタンを押してください")
 canvas1.create_window(200, 100, window=lbl)
 lbl2 = Label(root, text="パスワード：")
 canvas1.create_window(120, 230, window=lbl2)
-entry1 = tk.Entry (root) 
+entry1 = tk.Entry (root,show ='*') 
 canvas1.create_window(210, 230, window=entry1)
 def getName():
-    
+    global final_id
     final_id = face1.face_function()
     print(final_id)
     namelabel = Label(root, text = final_id)
     canvas1.create_window(120, 210, window=namelabel)
     
+def check_password(): 
+    #connecting to database
+    # 把 Heroku Postgres 的相關資訊寫到下列指令 (database, user, password, host, port)
+    conn=psycopg2.connect(database="d4u27skfpv14ni",user="mfvqhpuznumsaa",
+    password= "9806c470ce543836af4329fa597e2d403a52d59d686bc10060918093809a1934",
+    host="ec2-52-44-46-66.compute-1.amazonaws.com",
+    port="5432")
+    print("Connection established")
+    cursor=conn.cursor()
+
+    #get password from database
+    cursor.execute("SELECT password FROM info WHERE name ='" + final_id + "'" )
+
+    result = cursor.fetchone()
+    result_word = result[0]
+    #print (result_word)
+    decrypted_password = Security_key.decrypt(result_word)
     
+    #get local password input
+    USER_INPUT_PASSWORD = entry1.get()
+    #print (USER_INPUT_PASSWORD)
+    if(decrypted_password == USER_INPUT_PASSWORD):
+        now = datetime.datetime.now()
+        condrag = "Congradulations!! You are logined\n",now
+        
+        loginword = Label(root, text = condrag)
+        canvas1.create_window(190, 130, window=loginword)
+    else:
+        condrag = "SORRY,WRONG PASSWORD"
+        loginword = Label(root, text = condrag)
+        canvas1.create_window(190, 130, window=loginword)
+    ##################################################################################
+
+     
 
 #open facedetection    
 button1 = tk.Button(text='顔認証', command= getName,bg='brown', fg='white')
-canvas1.create_window(200, 180, window=button1)
+canvas1.create_window(170, 180, window=button1)
+
+#check password
+check = tk.Button(text='登録', command= check_password,bg='brown', fg='white')
+canvas1.create_window(220, 180, window=check)
 
 def saveinfo():    
     root2 = tk.Tk()
@@ -97,6 +136,6 @@ def saveinfo():
 
 
 #new user
-button2 = tk.Button(text='登録', command= saveinfo ,bg='brown', fg='white')
+button2 = tk.Button(text='新規登録', command= saveinfo ,bg='brown', fg='white')
 canvas1.create_window(380, 20, window=button2)
 root.mainloop()
