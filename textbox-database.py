@@ -8,7 +8,8 @@ import Security_key
 import face1
 import re
 import datetime
-
+from PIL import ImageTk, Image
+import os
 
 #build the chat box
 root = tk.Tk()
@@ -17,6 +18,8 @@ canvas1.pack()
 root.title("ようこそ、顔認証システム")
 lbl = Label(root, text="顔認証ボタンを押してください")
 canvas1.create_window(200, 100, window=lbl)
+userlabel = Label(root, text="ユーザーID：")
+canvas1.create_window(120, 210, window=userlabel)
 lbl2 = Label(root, text="パスワード：")
 canvas1.create_window(120, 230, window=lbl2)
 entry1 = tk.Entry (root,show ='*') 
@@ -25,10 +28,22 @@ def getName():
     global final_id
     final_id = face1.face_function()
     print(final_id)
+    #show word in userid input
     namelabel = Label(root, text = final_id)
-    canvas1.create_window(120, 210, window=namelabel)
+    canvas1.create_window(180, 210, window=namelabel)
+    #show picture
+    if (final_id == "認証失敗"):
+        filename = '認証失敗.jpg'
+    else:
+        filename = 'images\\' + final_id + '.jpg'
+    img = Image.open(filename)
+    resized_img = img.resize((140, 110))
+    root.photoimg = ImageTk.PhotoImage(resized_img)
+    labelimage = tk.Label(root, image=root.photoimg)
+    labelimage.place(x = 130, y = 10)
     
 def check_password(): 
+    
     #connecting to database
     # 把 Heroku Postgres 的相關資訊寫到下列指令 (database, user, password, host, port)
     conn=psycopg2.connect(database="d4u27skfpv14ni",user="mfvqhpuznumsaa",
@@ -43,6 +58,9 @@ def check_password():
 
     result = cursor.fetchone()
     result_word = result[0]
+    conn.commit()
+    cursor.close()
+    print("Connection closed")  
     #print (result_word)
     decrypted_password = Security_key.decrypt(result_word)
     
@@ -51,12 +69,27 @@ def check_password():
     #print (USER_INPUT_PASSWORD)
     if(decrypted_password == USER_INPUT_PASSWORD):
         now = datetime.datetime.now()
-        condrag = "Congradulations!! You are logined\n",now
+        condrag = "認証成功\n",now
         
         loginword = Label(root, text = condrag)
         canvas1.create_window(190, 130, window=loginword)
+
+        #Store time on database
+        conn=psycopg2.connect(database="dd4a12s1ulg1i7",user="ggtstohzdunlwq",
+        password= "53d079c43c336eb6700fae72f30d9511de4753866cce0a079b5a43a22a4e1809",
+        host="ec2-34-197-25-109.compute-1.amazonaws.com",
+        port="5432")
+        print("Connection established")
+
+        cursor=conn.cursor()
+        name = final_id
+        cursor.execute('insert into time_date(name, time) values(%s, %s)', (name, now))
+        print("Time recored")
+        conn.commit()
+        cursor.close()
+        print("Connection closed")  
     else:
-        condrag = "SORRY,WRONG PASSWORD"
+        condrag = "----パスワード間違います----\n--------------------------------"
         loginword = Label(root, text = condrag)
         canvas1.create_window(190, 130, window=loginword)
     ##################################################################################
@@ -90,14 +123,14 @@ def saveinfo():
         password = entry2.get()
         #cam = cv2.VideoCapture(0)
         cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        cv2.namedWindow("image_capture")
+        cv2.namedWindow("PRESS_SPACE_BAR_TO_TAKE_PICTURE")
         print('Press space to take image')
         while True:
             ret, frame = cam.read()
             if not ret:
                 print("failed to grab frame")
                 break
-            cv2.imshow("image_capture", frame)
+            cv2.imshow("PRESS_SPACE_BAR_TO_TAKE_PICTURE", frame)
 
             k = cv2.waitKey(1)
             if k%256 == 27:
@@ -129,13 +162,17 @@ def saveinfo():
     canvas1.create_window(210, 230, window=entry1)
     entry2 = tk.Entry (root2,show ='*',width = 20)
     canvas1.create_window(210, 250, window=entry2)
-
-    button3 = tk.Button(root2,text='Get the picture', command = getPicture1)
+    login = Label(root2, text = "ユーザーID：")
+    canvas1.create_window(110, 230, window=login)
+    password = Label(root2, text = "パスワード：")
+    canvas1.create_window(110, 250, window=password)
+    button3 = tk.Button(root2,text='写真撮影', command = getPicture1,bg='brown', fg='white')
     canvas1.create_window(200, 180, window=button3)
     root2.mainloop()
 
 
 #new user
 button2 = tk.Button(text='新規登録', command= saveinfo ,bg='brown', fg='white')
-canvas1.create_window(380, 20, window=button2)
+canvas1.create_window(360, 20, window=button2)
+
 root.mainloop()
